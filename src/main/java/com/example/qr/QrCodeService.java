@@ -1,5 +1,7 @@
 package com.example.qr;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
@@ -23,7 +25,8 @@ import java.util.Map;
 @Service
 public class QrCodeService {
 
-    public String readQrCode(BufferedImage image) throws NotFoundException {
+
+    public String decodeQrCode(BufferedImage image) throws NotFoundException {
         BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(image)));
         Map<DecodeHintType, Object> hints = new EnumMap<>(DecodeHintType.class);
         hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
@@ -32,7 +35,21 @@ public class QrCodeService {
         return result.getText();
     }
 
-    public Path generateQrCode(String content, String fileName) throws WriterException, IOException {
+
+    public QrCodeData readQrCode(BufferedImage image) throws IOException, NotFoundException {
+        String qrCodeText = decodeQrCode(image); // Corrected to call the right method
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            return objectMapper.readValue(qrCodeText, QrCodeData.class);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            throw new IOException("Error parsing QR code content", e);
+        }
+    }
+    public Path generateQrCode(QrCodeData qrCodeData, String fileName) throws WriterException, IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jsonContent = objectMapper.writeValueAsString(qrCodeData);
         int width = 300;
         int height = 300;
 
@@ -48,7 +65,7 @@ public class QrCodeService {
 
             // QR Code generieren
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, width, height);
+            BitMatrix bitMatrix = qrCodeWriter.encode(jsonContent, BarcodeFormat.QR_CODE, width, height);
 
             // Dateipfad definieren + .png
             Path filePath = directoryPath.resolve(cleanedFileName + ".png");
@@ -60,7 +77,6 @@ public class QrCodeService {
 
             return filePath;
         } catch (WriterException | IOException e) {
-            // Exception Handling
             e.printStackTrace();
             throw new RuntimeException("Error generating QR code: " + e.getMessage());
         }
@@ -69,10 +85,7 @@ public class QrCodeService {
         return fileName.replaceAll("[^a-zA-Z0-9]", "_");
     }
 
-    public String readQrCodeFromUrl(String url) throws IOException, NotFoundException {
-        BufferedImage image = ImageIO.read(new URL(url));
-        return readQrCode(image);
-    }
+
 
 
 

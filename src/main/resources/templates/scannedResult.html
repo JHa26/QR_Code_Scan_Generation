@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Code Ausgabe</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .button {
+            background-color: #D3D3D3;
+            border: none;
+            color: black;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    window.onload = function() {
+        var location = [[${scannedLocation}]];
+        if (location) {
+            var map = L.map('map').setView(location, 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.marker(location).addTo(map)
+                .bindPopup('Scanned Location')
+                .openPopup();
+        }
+    };
+
+    function goBackToMain() {
+        window.location.href = '/';
+    }
+    /*]]>*/
+</script>
+<button class="button" onclick="goBackToMain()">Zurück zur Hauptseite</button>
+<br>
+
+<img th:if="${scannedImageUrl}" th:src="@{${scannedImageUrl}}" alt="Scanned Image" />
+<br>
+
+<p><span th:text="${scannedNotes}"></span></p>
+
+<div id="map" style="height: 400px;"></div>
+
+
+
+</body>
+</html>

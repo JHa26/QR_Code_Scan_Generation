@@ -1,6 +1,7 @@
 package com.example.qr;
 
 import com.google.zxing.NotFoundException;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -16,6 +17,8 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 
 @Controller
 @RequestMapping("/")
@@ -28,51 +31,86 @@ public class QrController {
         this.qrCodeService = qrCodeService;
     }
 
+
     @GetMapping
-    public String index(Model model) {
+    public String index(HttpSession session, Model model) {
+        if (session.getAttribute("user") == null) {
+            return "redirect:/login";
+        }
         model.addAttribute("qrCodePath", "");
         model.addAttribute("scannedQrCodeContent", "");
         return "index";
     }
 
+    @Autowired
+    private GeocodingService geocodingService;
+
     @PostMapping("/generate")
-    public String generateQRCode(@RequestParam String content, @RequestParam String fileName, Model model) {
+    public String generateQRCode(HttpSession session,
+                                 @RequestParam String notes,
+                                 @RequestParam String city,
+                                 @RequestParam String fileName,
+                                 @RequestParam("file") MultipartFile file,
+                                 Model model) {
+        if (session.getAttribute("user") == null) {
+            return "redirect:/login";
+        }
         try {
-            String cleanedFileName = qrCodeService.getCleanedFileName(fileName);
-            Path filePath = qrCodeService.generateQrCode(content, fileName);
+            String imageUrl = null;
+            if (!file.isEmpty()) {
+                imageUrl = fileStorageService.saveUploadedFile(file);
+            }
 
-            // Pfad im model festlegen
-            model.addAttribute("qrCodePath", cleanedFileName + ".png");
+            String location = geocodingService.getCoordinates(city);
 
-            // QR Code behalten anstatt löschen
-            model.addAttribute("scannedQrCodeContent", "");
+            QrCodeData qrCodeData = new QrCodeData();
+            qrCodeData.setImageUrl(imageUrl);
+            qrCodeData.setNotes(notes);
+            qrCodeData.setLocation(location);
 
+            Path filePath = qrCodeService.generateQrCode(qrCodeData, fileName);
+            model.addAttribute("qrCodePath", filePath.getFileName().toString());
             return "index";
         } catch (Exception e) {
-            // Exception Handling
-            e.printStackTrace();
-            model.addAttribute("error", "Error generating QR code: " + e.getMessage());
+            model.addAttribute("error", "Error QR Code Erstellung: " + e.getMessage());
             return "index";
         }
     }
 
+
+
+
     @PostMapping("/scan")
-    public String scanQrCode(@RequestParam("file") MultipartFile file, Model model) {
+    public String scanQrCode(HttpSession session, @RequestParam("file") MultipartFile file, Model model) {
+        if (session.getAttribute("user") == null) {
+            return "redirect:/login";
+        }
         try {
             BufferedImage image = ImageIO.read(file.getInputStream());
-            String qrCodeText = qrCodeService.readQrCode(image);
+            QrCodeData qrCodeData = qrCodeService.readQrCode(image);
 
-            // scannedQrCodeContent model hinzufügen
-            model.addAttribute("scannedQrCodeContent", qrCodeText);
+            model.addAttribute("scannedImageUrl", qrCodeData.getImageUrl());
+            model.addAttribute("scannedNotes", qrCodeData.getNotes());
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.TEXT_PLAIN);
+            if (qrCodeData.getLocation() != null && !qrCodeData.getLocation().isEmpty()) {
+                String[] parts = qrCodeData.getLocation().split(",");
+                List<Double> location = Arrays.asList(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]));
+                model.addAttribute("scannedLocation", location);
+            } else {
+                model.addAttribute("scannedLocation", null);
+            }
 
-            return "index";
+            return "scannedResult";
         } catch (IOException | NotFoundException e) {
             e.printStackTrace();
             model.addAttribute("error", "Error scanning QR code: " + e.getMessage());
             return "index";
         }
     }
+
+
+    @Autowired
+    private FileStorageService fileStorageService;
+
+
 }

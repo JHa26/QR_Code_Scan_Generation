@@ -3,47 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <title>QR Code Generator and Scanner</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .button {
+            background-color: #D3D3D3;
+            border: none;
+            color: black;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    window.onload = function() {
+        var location = [[${scannedLocation}]]; // Get the location from your model
+        if (location) {
+            var map = L.map('map').setView(location, 13); // Initialize the map on the 'map' div
 
-<!-- Generate QR Code Section -->
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.marker(location).addTo(map) // Add a marker for the location
+                .bindPopup('Scanned Location')
+                .openPopup();
+        }
+    };
+    /*]]>*/
+</script>
+
 <h2>Generate QR Code</h2>
-<form action="/generate" method="post">
-    <label for="content">Content:</label>
-    <input type="text" id="content" name="content" required>
+<form action="/generate" method="post" enctype="multipart/form-data">
+    <label for="notes"><strong>Notiz:</strong></label>
+    <br>
+    <input type="text" id="notes" name="notes" required>
     <br>
 
-    <label for="fileName">File Name:</label>
+    <label for="city"><strong>Stadt:</strong></label>
+    <br>
+    <input type="text" id="city" name="city" required>
+    <br>
+
+    <label for="file"><strong>Bild:</strong></label>
+    <br>
+    <input type="file" id="file" name="file" accept="image/*">
+    <br>
+
+    <label for="fileName"><strong>Dateiname:</strong></label>
+    <br>
     <input type="text" id="fileName" name="fileName" required>
     <br>
-
-    <button type="submit">Generate QR Code</button>
+    <br>
+    <button type="submit" class="button">Generate QR Code</button>
 </form>
-
-<!-- Display Generated QR Code -->
-<img th:src="@{'/generated-qr-codes/' + ${qrCodePath}}" alt="QR Code">
-
-<!-- Display Error Message if Available -->
-<p th:text="${error}" style="color: red;"></p>
+<div th:if="${qrCodePath != null and qrCodePath != ''}">
+    <img th:src="@{'/generated-qr-codes/' + ${qrCodePath}}" alt="QR Code">
+</div>
 
 <hr>
 
-<!-- Scan QR Code Section -->
 <h2>Scan QR Code</h2>
 <form action="/scan" method="post" enctype="multipart/form-data">
-    <label for="file">Upload QR Code Image:</label>
+    <label for="file"><strong>QR Code:</strong></label>
+    <br>
     <input type="file" id="file" name="file" accept="image/*" required>
     <br>
-
-    <label for="url">Or Enter URL:</label>
-    <input type="text" id="url" name="url">
     <br>
-
-    <button type="submit">Scan QR Code</button>
+    <button type="submit" class="button">Scan QR Code</button>
 </form>
 
-<!-- Display Scanned QR Code Content -->
-<p th:text="${scannedQrCodeContent}" style="color: green;"></p>
+<hr>
+
+<form action="/logout" method="get">
+    <button class="button">Logout</button>
+</form>
+
 
 </body>
 </html>

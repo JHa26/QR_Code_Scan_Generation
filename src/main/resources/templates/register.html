@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .button {
+            background-color: #D3D3D3;
+            border: none;
+            color: black;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<h2>Register</h2>
+<form action="/register" method="post">
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username"><br>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password"><br>
+    <button type="submit" class="button">Account erstellen</button>
+</form>
+</body>
+</html>
